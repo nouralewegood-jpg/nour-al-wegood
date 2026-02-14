@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, projects, consultations, materials, pricing, reviews, chatHistory, Project, Consultation, Material, Pricing, Review, ChatHistory, InsertConsultation } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -35,7 +35,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     };
     const updateSet: Record<string, unknown> = {};
 
-    const textFields = ["name", "email", "loginMethod"] as const;
+    const textFields = ["name", "email", "loginMethod", "phone"] as const;
     type TextField = (typeof textFields)[number];
 
     const assignNullable = (field: TextField) => {
@@ -89,4 +89,99 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// دوال المشاريع
+export async function getProjects(limit: number = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(projects).orderBy(desc(projects.createdAt)).limit(limit);
+}
+
+export async function getProjectById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getCompletedProjects(limit: number = 6) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(projects)
+    .where(eq(projects.status, 'completed'))
+    .orderBy(desc(projects.completedAt))
+    .limit(limit);
+}
+
+// دوال الاستشارات
+export async function createConsultation(consultation: InsertConsultation) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(consultations).values(consultation);
+  return result;
+}
+
+export async function getConsultations(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(consultations).where(eq(consultations.userId, userId));
+}
+
+// دوال المواد والتشطيبات
+export async function getMaterials(category?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (category) {
+    return db.select().from(materials).where(eq(materials.category, category));
+  }
+  return db.select().from(materials);
+}
+
+export async function getMaterialById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(materials).where(eq(materials.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+// دوال الأسعار
+export async function getPricing(projectType: string, style: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(pricing)
+    .where(eq(pricing.projectType, projectType))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getAllPricing() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(pricing);
+}
+
+// دوال التقييمات
+export async function getProjectReviews(projectId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(reviews).where(eq(reviews.projectId, projectId));
+}
+
+// دوال سجل المحادثات
+export async function saveChatMessage(userId: number, userMessage: string, assistantResponse: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(chatHistory).values({
+    userId,
+    userMessage,
+    assistantResponse,
+  });
+}
+
+export async function getChatHistory(userId: number, limit: number = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(chatHistory)
+    .where(eq(chatHistory.userId, userId))
+    .orderBy(desc(chatHistory.createdAt))
+    .limit(limit);
+}
