@@ -17,10 +17,16 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script
-      defer
-      src="%VITE_ANALYTICS_ENDPOINT%/umami"
-      data-website-id="%VITE_ANALYTICS_WEBSITE_ID%"></script>
+    <!-- Analytics placeholder -->
+    <script>
+      if (window.VITE_ANALYTICS_ENDPOINT && window.VITE_ANALYTICS_WEBSITE_ID) {
+        const script = document.createElement('script');
+        script.defer = true;
+        script.src = `${window.VITE_ANALYTICS_ENDPOINT}/umami`;
+        script.setAttribute('data-website-id', window.VITE_ANALYTICS_WEBSITE_ID);
+        document.head.appendChild(script);
+      }
+    </script>
   </body>
 
 </html>
